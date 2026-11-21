@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seiko QAW109G rebuild guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0EB; --surface:#FAFBF8; --ink:#17231F; --muted:#56645E; --line:#C9D1CA;
+  --brass:#8A6510; --brass-fill:#F3E7C4; --stage:#DDE4DD; --stage-2:#C7D1C9;
+  --seen:#23664A; --partly:#8A6510; --assumed:#2A5E96; --assumed-fill:#DCE8F5;
+  --btn:#17231F; --btn-ink:#FAFBF8; --focus:#2A5E96;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1916; --surface:#16231F; --ink:#E7EDE8; --muted:#9DADA5; --line:#2B3C36;
+    --brass:#DDB651; --brass-fill:#3A2F12; --stage:#0B1311; --stage-2:#16231F;
+    --seen:#74C79E; --partly:#DDB651; --assumed:#86B7EA; --assumed-fill:#162B41;
+    --btn:#E7EDE8; --btn-ink:#0F1916; --focus:#86B7EA;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1916; --surface:#16231F; --ink:#E7EDE8; --muted:#9DADA5; --line:#2B3C36;
+  --brass:#DDB651; --brass-fill:#3A2F12; --stage:#0B1311; --stage-2:#16231F;
+  --seen:#74C79E; --partly:#DDB651; --assumed:#86B7EA; --assumed-fill:#162B41;
+  --btn:#E7EDE8; --btn-ink:#0F1916; --focus:#86B7EA;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%; scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; height:100%; background:var(--bg); color:var(--ink);
+  font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:16px; line-height:1.5; font-stretch:100%;
+  display:grid; grid-template-rows:auto minmax(0,1fr);
+}
+header.top{
+  padding:14px 20px 12px; border-bottom:1px solid var(--line);
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 18px;
+}
+header.top h1{
+  margin:0; font-size:1.3rem; font-weight:700; font-stretch:112%; letter-spacing:-0.01em;
+}
+header.top p{margin:0; color:var(--muted); font-size:.92rem}
+main{display:grid; grid-template-columns:minmax(0,1fr) 410px; min-height:0}
+
+/* stage */
+.stage{display:grid; grid-template-rows:minmax(0,1fr) auto; min-height:0; min-width:0; border-right:1px solid var(--line)}
+.view{position:relative; min-height:0; background:var(--stage)}
+.view canvas{display:block; width:100%; height:100%; touch-action:none; cursor:grab}
+.view canvas:active{cursor:grabbing}
+.readout{
+  position:absolute; left:12px; top:12px; max-width:min(320px,calc(100% - 24px));
+  background:var(--surface); border:1px solid var(--line); border-radius:6px;
+  padding:8px 11px; font-size:.86rem; line-height:1.35;
+}
+.readout strong{display:block; font-weight:650}
+.readout span{color:var(--muted)}
+.nogl{position:absolute; inset:0; display:none; place-items:center; padding:24px; text-align:center; color:var(--muted)}
+.tools{
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px;
+  padding:10px 14px; border-top:1px solid var(--line); background:var(--surface); font-size:.88rem;
+}
+.tools label{display:flex; align-items:center; gap:7px; color:var(--muted)}
+.tools .grp{display:flex; align-items:center; gap:6px}
+.seg{display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden}
+.seg button{
+  font:inherit; color:var(--ink); background:transparent; border:0; padding:6px 10px; cursor:pointer;
+  border-right:1px solid var(--line);
+}
+.seg button:last-child{border-right:0}
+.seg button:hover{background:var(--bg)}
+input[type=range]{width:130px; accent-color:var(--brass)}
+input[type=checkbox]{accent-color:var(--assumed); width:16px; height:16px}
+select{
+  font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--line);
+  border-radius:6px; padding:5px 8px;
+}
+
+/* guide */
+.guide{overflow-y:auto; min-height:0; background:var(--surface)}
+.guide-inner{padding:20px 22px 28px}
+.count{margin:0 0 2px; color:var(--brass); font-weight:600; font-size:.9rem; font-variant-numeric:tabular-nums}
+.guide h2{margin:0 0 10px; font-size:1.45rem; line-height:1.2; font-weight:700; font-stretch:108%; letter-spacing:-0.012em}
+.guide p{margin:0 0 12px; max-width:62ch}
+.check{
+  border-left:3px solid var(--seen); padding:2px 0 2px 12px; margin:0 0 14px; font-size:.95rem;
+}
+.check b{color:var(--seen); font-weight:650}
+.plist{list-style:none; margin:0 0 16px; padding:0; border-top:1px solid var(--line)}
+.plist li{border-bottom:1px solid var(--line)}
+.plist button{
+  all:unset; box-sizing:border-box; width:100%; cursor:pointer; padding:9px 2px;
+  display:grid; grid-template-columns:1fr auto; gap:2px 10px; align-items:baseline;
+}
+.plist button:hover .pn{text-decoration:underline}
+.pn{font-weight:600}
+.pd{grid-column:1 / -1; color:var(--muted); font-size:.88rem; line-height:1.4}
+.tag{font-size:.78rem; font-weight:600; white-space:nowrap; padding:1px 7px; border-radius:99px; border:1px solid currentColor}
+.tag.seen{color:var(--seen)}
+.tag.partly{color:var(--partly)}
+.tag.assumed{color:var(--assumed); background:var(--assumed-fill)}
+.nav{display:flex; gap:10px; margin:4px 0 22px}
+.nav button{
+  font:inherit; font-weight:600; border-radius:6px; padding:10px 16px; cursor:pointer;
+  border:1px solid var(--btn); background:var(--btn); color:var(--btn-ink); flex:1;
+}
+.nav button.ghost{background:transparent; color:var(--ink); border-color:var(--line); flex:0 0 auto}
+.nav button:disabled{opacity:.4; cursor:default}
+.steps-h{margin:0 0 6px; font-size:.95rem; font-weight:650}
+ol.steps{margin:0; padding:0; list-style:none; counter-reset:s}
+ol.steps li{counter-increment:s}
+ol.steps button{
+  all:unset; box-sizing:border-box; cursor:pointer; width:100%; padding:6px 8px; border-radius:5px;
+  display:grid; grid-template-columns:1.9em 1fr; font-size:.93rem; line-height:1.35;
+}
+ol.steps button::before{content:counter(s); color:var(--muted); font-variant-numeric:tabular-nums}
+ol.steps button:hover{background:var(--bg)}
+ol.steps button[aria-current="step"]{background:var(--brass-fill); font-weight:600}
+ol.steps button[aria-current="step"]::before{color:var(--brass)}
+.key{margin:18px 0 0; padding-top:14px; border-top:1px solid var(--line); font-size:.88rem; color:var(--muted)}
+.key p{margin:0 0 8px}
+.key .tag{margin-right:4px}
+button:focus-visible, select:focus-visible, input:focus-visible, .plist button:focus-visible, ol.steps button:focus-visible{
+  outline:2px solid var(--focus); outline-offset:2px;
+}
+
+@media (max-width: 900px){
+  body{height:auto; display:block}
+  main{display:block}
+  .stage{border-right:0; display:contents}
+  .view{height:46vh; height:46svh; min-height:280px; position:sticky; top:env(safe-area-inset-top,0px); z-index:5; border-bottom:1px solid var(--line)}
+  body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:10; background:var(--bg)}
+  .guide{overflow:visible}
+  input[type=range]{width:110px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Seiko QAW109G, rebuilt from six photos</h1>
+  <p>A part-by-part model of the pyramid skeleton clock, with the order to put it back together.</p>
+</header>
+
+<main>
+  <section class="stage" aria-label="3D model">
+    <div class="view" id="view">
+      <canvas id="c" aria-label="Rotatable 3D model of the clock movement"></canvas>
+      <div class="readout" id="readout" aria-live="polite"><strong>Drag to turn, scroll or pinch to zoom</strong><span>Tap any part to name it.</span></div>
+      <div class="nogl" id="nogl">This browser couldn’t start the 3D view. The written steps on this page still work.</div>
+    </div>
+    <div class="tools">
+      <div class="grp">
+        <div class="seg" role="group" aria-label="View">
+          <button type="button" data-view="front">Front</button>
+          <button type="button" data-view="back">Back</button>
+          <button type="button" data-view="side">Side</button>
+          <button type="button" data-view="angle">Angle</button>
+        </div>
+      </div>
+      <label>Pull apart <input type="range" id="explode" min="0" max="100" value="0"></label>
+      <label>Gears
+        <select id="speed">
+          <option value="0">stopped</option>
+          <option value="1">real time</option>
+          <option value="60" selected>1 minute per second</option>
+          <option value="600">10 minutes per second</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="mark" checked> Show my guesses in blue</label>
+      <label><input type="checkbox" id="cover" checked> Cover</label>
+    </div>
+  </section>
+
+  <aside class="guide" aria-label="Reassembly steps">
+    <div class="guide-inner">
+      <p class="count" id="count"></p>
+      <h2 id="title"></h2>
+      <div id="body"></div>
+      <ul class="plist" id="plist"></ul>
+      <div class="nav">
+        <button type="button" class="ghost" id="prev">Back</button>
+        <button type="button" id="next">Next step</button>
+      </div>
+      <p class="steps-h">All steps</p>
+      <ol class="steps" id="steps"></ol>
+      <div class="key">
+        <p><span class="tag seen">Seen</span> The part and its place are clear in the photos.</p>
+        <p><span class="tag partly">Partly seen</span> I can see an edge or a pivot hole, and inferred the rest.</p>
+        <p><span class="tag assumed">My guess</span> Hidden in every photo. Drawn so the gearing works, and may differ from your parts.</p>
+        <p>Tooth counts are estimates from blurry edges. Where your own part disagrees with this model, trust the part.</p>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ---------- step text ---------- */
+var STEPS = [
+  { title:'The finished clock',
+    body:['This is the clock as I read it from your six photos. Use “Pull apart” to see how the layers stack, and “Back” or “Side” to compare with your own parts.',
+          'Before you start: take the battery out, work over a tray, and count the teeth on each loose wheel. The counts in this guide are estimates, so match parts by size and shape first.'],
+    cam:{t:[0,30,6], r:590} },
+  { title:'Stand the back plate on its pillars',
+    body:['The back plate is the one the setting knob pokes through. Screw the two pillars into the eyes at the ends of the arch, and the third post into the top of the arm.',
+          'Rest the plate flat on a roll of tape with the pillars pointing up, so the center hole is clear underneath.'],
+    check:'All three posts stand square and the plate doesn’t rock.',
+    cam:{t:[0,6,10], r:250} },
+  { title:'Seat the motor and rotor',
+    body:['The coil, stator and rotor sit low in the frame, to the right as you look from the front. No photo shows them, so this block is a stand-in for whatever yours looks like.',
+          'The rotor is the tiny wheel with a magnet on it. It snaps toward the steel stator when you bring it close. Its pinion faces the front.'],
+    cam:{t:[4,-10,8], r:210} },
+  { title:'Fit the center arbor, spring and center wheel',
+    body:['The center arbor is the long steel shaft with the chrome knob. Behind the plate it carries a brass sleeve. Just inside the plate sits a dark tension spring, then the large coarse-toothed wheel with five spokes.',
+          'The spring is a clutch. It lets the knob turn the hands without forcing the gear train.'],
+    check:'Hold the wheel still and turn the knob. It should turn with a smooth, firm drag.',
+    cam:{t:[0,2,6], r:230} },
+  { title:'Add the transfer wheel on the right leg',
+    body:['Each plate has a pivot hole in both lower legs. The right one carries a brass wheel about 19 mm across, set toward the back.',
+          'I can see its rim in two photos but not what it meshes with. In this layout the rotor pinion drives it.'],
+    cam:{t:[6,-10,8], r:210} },
+  { title:'Stand the seconds arbor in the bottom hole',
+    body:['The seconds arbor goes in the bottom-center hole and is long enough to reach out through the front plate, where the seconds hand sits.',
+          'In this layout it carries two wheels, with a small idler linking it to the transfer wheel. The pivot holes are real. The wheels are my guess at what fills them.'],
+    cam:{t:[2,-14,10], r:210} },
+  { title:'Add the idler on the left leg',
+    body:['The left leg pivot carries a wheel of about the same size as the one on the right. It sits further forward and passes the motion from the seconds arbor up to the center.',
+          'An idler here also makes the seconds hand turn clockwise, which a direct mesh would not.'],
+    cam:{t:[-4,-10,12], r:210} },
+  { title:'Slide the center pipe over the center arbor',
+    body:['A short brass pipe turns freely on the center arbor. It carries a medium wheel about 27 mm across and, in front of that, a pinion of about 20 teeth.',
+          'The wheel meshes with the left idler. The pinion will drive the big upper wheel in the next step.'],
+    check:'The pipe spins freely on the arbor. It must not grip it.',
+    cam:{t:[0,0,13], r:220} },
+  { title:'Drop in the upper arbor',
+    body:['This is the arbor I’m most sure of, because four photos show it. From the back plate forward: a small knurled collar, a long brass pinion with about 12 leaves, a cream plastic spacer, then the big five-spoke wheel with about 100 fine teeth.',
+          'The long pinion meshes with the center wheel near the back. The big wheel meshes with the pinion on the center pipe near the front.'],
+    check:'Nudge the big wheel with a fingertip. The center wheel should creep the opposite way.',
+    cam:{t:[0,10,12], r:240} },
+  { title:'Fit the hour-hand gearing',
+    body:['Three small parts make the hour hand turn at one twelfth the speed of the minute hand: a pinion fixed on the center arbor, a small wheel and pinion on a stud, and the hour wheel on its tube.',
+          'None of the photos shows them, so look at your own parts. A wheel on a short tube that slides over the center arbor is the hour wheel. It goes on last, tube pointing forward.'],
+    cam:{t:[0,4,18], r:200} },
+  { title:'Lower the front plate',
+    body:['Lower the front plate over the arbors and guide the pivots into their holes one at a time with a toothpick. Start with the longest arbors, the center and the seconds, and finish with the short ones.',
+          'Don’t press. When every pivot is home, the plate drops onto the pillars under its own weight. Then fit the two pillar screws and the top screw.'],
+    check:'Spin the big upper wheel lightly. Every wheel down to the rotor should move. If anything binds, lift the plate and look for a pivot sitting beside its hole.',
+    cam:{t:[0,6,12], r:260} },
+  { title:'Mount the movement on its shelf',
+    body:['The movement stands on a polished shelf carried by four posts. The brushed battery box hangs under the shelf at the back and takes one AA cell.',
+          'Screw the bottom bars of both plates to the shelf. Two fine wires run from the box to the motor coil, so check that neither has broken.'],
+    cam:{t:[0,-14,4], r:330} },
+  { title:'Fit the seconds ring and the dial ring',
+    body:['The small seconds ring goes on first with its two screws, with 60 at the top.',
+          'The large ring sits in front of it on four posts: two at the top either side of XII, and two near 4 and 8 o’clock. XII sits over the upper arbor.'],
+    cam:{t:[0,0,14], r:360} },
+  { title:'Press on the hands',
+    body:['Press the hour hand onto the tube pointing straight at any hour mark. Add the minute hand pointing at XII, then the gold cap nut, finger-tight.',
+          'I couldn’t find a seconds hand in the photos. If yours has one, it presses onto the seconds arbor last.'],
+    check:'Turn the knob through twelve hours. The hands must clear each other and the seconds ring all the way round.',
+    cam:{t:[0,0,16], r:360} },
+  { title:'Stand it on the base and fit the cover',
+    body:['Screw the four posts to the mirrored base and fit a fresh AA cell.',
+          'Watch for a minute to confirm the train is stepping before you lower the acrylic cover onto the base.'],
+    cam:{t:[0,30,6], r:590} }
+];
+
+var CONF = { seen:'Seen', partly:'Partly seen', assumed:'My guess' };
+
+/* ---------- guide panel (works without WebGL) ---------- */
+var $ = function(id){ return document.getElementById(id); };
+var step = 0, parts = [], onStep = function(){}, onPick = function(){};
+
+function renderPanel(){
+  var s = STEPS[step];
+  $('count').textContent = step === 0 ? 'Overview' : 'Step ' + step + ' of ' + (STEPS.length - 1);
+  $('title').textContent = s.title;
+  var b = $('body'); b.textContent = '';
+  s.body.forEach(function(t){ var p = document.createElement('p'); p.textContent = t; b.appendChild(p); });
+  if (s.check){
+    var c = document.createElement('p'); c.className = 'check';
+    var lab = document.createElement('b'); lab.textContent = 'Check: ';
+    c.appendChild(lab); c.appendChild(document.createTextNode(s.check)); b.appendChild(c);
+  }
+  var ul = $('plist'); ul.textContent = '';
+  parts.filter(function(p){ return p.step === step; }).forEach(function(p){
+    var li = document.createElement('li'), bt = document.createElement('button');
+    bt.type = 'button';
+    var n = document.createElement('span'); n.className = 'pn'; n.textContent = p.name;
+    var t = document.createElement('span'); t.className = 'tag ' + p.conf; t.textContent = CONF[p.conf];
+    var d = document.createElement('span'); d.className = 'pd'; d.textContent = p.note;
+    bt.appendChild(n); bt.appendChild(t); bt.appendChild(d);
+    bt.addEventListener('click', function(){ onPick(p); });
+    li.appendChild(bt); ul.appendChild(li);
+  });
+  ul.style.display = ul.children.length ? '' : 'none';
+  $('prev').disabled = step === 0;
+  $('next').textContent = step === 0 ? 'Start rebuilding' : (step === STEPS.length - 1 ? 'Back to overview' : 'Next step');
+  Array.prototype.forEach.call($('steps').children, function(li, i){
+    var bt = li.firstChild;
+    if (i + 1 === step) bt.setAttribute('aria-current', 'step'); else bt.removeAttribute('aria-current');
+  });
+}
+function setStep(n){
+  step = (n + STEPS.length) % STEPS.length;
+  renderPanel(); onStep();
+}
+STEPS.forEach(function(s, i){
+  if (i === 0) return;
+  var li = document.createElement('li'), bt = document.createElement('button');
+  bt.type = 'button'; bt.textContent = s.title;
+  bt.addEventListener('click', function(){ setStep(i); });
+  li.appendChild(bt); $('steps').appendChild(li);
+});
+$('prev').addEventListener('click', function(){ setStep(step - 1); });
+$('next').addEventListener('click', function(){ setStep(step === STEPS.length - 1 ? 0 : step + 1); });
+
+/* ---------- 3D ---------- */
+var T = window.THREE, canvas = $('c'), view = $('view'), renderer = null;
+try {
+  if (!T) throw new Error('three.js missing');
+  renderer = new T.WebGLRenderer({ canvas:canvas, antialias:true, alpha:true });
+} catch (e) { renderer = null; }
+
+if (!renderer){
+  $('nogl').style.display = 'grid'; canvas.style.display = 'none'; $('readout').style.display = 'none';
+  buildPartIndexOnly(); renderPanel(); return;
+}
+
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputEncoding = T.sRGBEncoding;
+renderer.toneMapping = T.ACESFilmicToneMapping;
+renderer.toneMappingExposure = .9;
+renderer.setClearColor(0x000000, 0);
+if (T.ColorManagement) T.ColorManagement.legacyMode = true;
+
+var scene = new T.Scene();
+var camera = new T.PerspectiveCamera(30, 1, 5, 4000);
+
+/* studio environment: bright softboxes in a dark warm room, which is what makes polished metal and glass read */
+(function(){
+  var es = new T.Scene();
+  function panel(w, h, d, x, y, z, r, g, b){
+    var m = new T.Mesh(new T.BoxGeometry(w, h, d), new T.MeshBasicMaterial({ color:new T.Color(r, g, b), side:T.DoubleSide }));
+    m.position.set(x, y, z); es.add(m);
+  }
+  var room = new T.Mesh(new T.BoxGeometry(40, 24, 40), new T.MeshBasicMaterial({ color:new T.Color(.24, .22, .19), side:T.BackSide }));
+  es.add(room);
+  panel(40, .1, 40, 0, -11.9, 0, .34, .28, .2);        // warm floor bounce
+  panel(16, .2, 10, 0, 11.8, -10, 3.2, 3.1, 2.95);        // overhead softbox, set back from the front pane
+  // tall light banks and black cards on every wall, so flat metal always has a bright band and a dark band to reflect
+  var bands = [[-15, 5, 1.5], [-8.5, 2.4, .03], [-3, 6.5, 1.05], [4.5, 2, 2.1], [9, 3, .03], [15, 5.5, .85]];
+  bands.forEach(function(q){
+    panel(q[1], 20, .2, q[0], 0, 19.7, q[2], q[2] * .97, q[2] * .93);            // front
+    panel(q[1], 20, .2, -q[0], 0, -19.7, q[2] * .8, q[2] * .78, q[2] * .75);     // back
+    panel(.2, 20, q[1], -19.7, 0, q[0], q[2], q[2] * .97, q[2] * .93);           // left
+    panel(.2, 20, q[1], 19.7, 0, -q[0], q[2] * .8, q[2] * .78, q[2] * .75);      // right
+  });
+  panel(6, .2, 6, -10, -11.7, 8, 1.5, 1.05, .55);      // warm low card for the undersides
+  var pm = new T.PMREMGenerator(renderer);
+  scene.environment = pm.fromScene(es, 0).texture;
+  pm.dispose();
+})();
+var key = new T.DirectionalLight(0xfff4e2, .6); key.position.set(120, 260, 300); scene.add(key);
+
+/* the cover refracts whatever is behind it, so the backdrop has to be part of the scene */
+function applyBackdrop(){
+  var c = getComputedStyle(document.documentElement).getPropertyValue('--stage').trim() || '#DDE4DD';
+  scene.background = new T.Color(c);
+}
+applyBackdrop();
+
+/* materials */
+function std(o){ return new T.MeshStandardMaterial(o); }
+function gold(o){
+  var m = new T.MeshPhysicalMaterial(Object.assign({ metalness:1, roughness:.1, clearcoat:.35, clearcoatRoughness:.02, envMapIntensity:1.1 }, o || {}));
+  m.color.setRGB(1, .70, .27); return m;                 // measured reflectance of gold, linear
+}
+function streaks(){
+  var cv = document.createElement('canvas'); cv.width = 256; cv.height = 256;
+  var g = cv.getContext('2d'); g.fillStyle = '#808080'; g.fillRect(0, 0, 256, 256);
+  for (var i = 0; i < 1800; i++){
+    var v = 90 + Math.floor(Math.random() * 90);
+    g.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',.5)';
+    g.fillRect(Math.random() * 256, Math.random() * 256, 30 + Math.random() * 120, 1);
+  }
+  var t = new T.CanvasTexture(cv); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(2, 6); return t;
+}
+var brushTex = streaks();
+var M = {
+  brass:   gold(),
+  brushed: gold({ roughness:.42, clearcoat:.25, clearcoatRoughness:.3, bumpMap:brushTex, bumpScale:.06, roughnessMap:brushTex }),
+  steel:   std({ color:0xC9CDD1, metalness:1, roughness:.08 }),
+  chrome:  std({ color:0xF2F3F4, metalness:1, roughness:.06, flatShading:true }),
+  dark:    std({ color:0x34353A, metalness:.9, roughness:.45 }),
+  black:   std({ color:0x0B0C0D, metalness:0, roughness:.42 }),
+  cream:   std({ color:0xE6D9AE, metalness:0, roughness:.55 }),
+  copper:  std({ color:0xC06A34, metalness:1, roughness:.35 }),
+  mirror:  gold({ roughness:.03, clearcoat:0 }),
+  silverB: std({ color:0xE4E5E3, metalness:1, roughness:.07 }),
+  /* glass in two layers: a faint tint, plus a black, mirror-smooth layer added on top so only its reflections show.
+     Both are ordinary blended layers, so everything behind them stays sharp and nothing is left out. */
+  glassTint: new T.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:.035, depthWrite:false, side:T.DoubleSide }),
+  glassShine: new T.MeshPhysicalMaterial({ color:0x000000, metalness:0, roughness:0, ior:1.49, envMapIntensity:.16,
+             transparent:true, blending:T.AdditiveBlending, depthWrite:false, side:T.FrontSide }),
+  edge:    new T.MeshPhysicalMaterial({ color:0xffffff, metalness:0, roughness:.05, envMapIntensity:1.6, transparent:true, opacity:.4, depthWrite:false }),
+  ghost:   std({ color:0x2F7FE0, metalness:.1, roughness:.45 })
+};
+M.mirror.color.setRGB(1, .80, .48);
+
+/* geometry helpers. Units are millimeters. x right, y up, z toward the front. */
+var GAP = 23, PT = 1.2, HC = 64;                 // plate spacing, plate thickness, center height above base
+var U  = { x:0, y:23.8 }, C = { x:0, y:0 }, S = { x:0, y:-23.5 };
+var LL = { x:-16.12, y:-16.06 }, LR = { x:16.12, y:-16.06 };
+var XI = { x:11.93, y:-19.47 }, ROT = { x:14.47, y:-26.94 }, STUD = { x:0, y:11.2 };
+var EYE = { x:27, y:-3.4 }, TOP = { x:0, y:48 };
+
+function cyl(r, len, mat, seg){
+  var m = new T.Mesh(new T.CylinderGeometry(r, r, len, seg || 28), mat);
+  m.rotation.x = Math.PI / 2; return m;            // axis along z
+}
+function at(obj, x, y, z){ obj.position.set(x, y, z); return obj; }
+function rod(r, z0, z1, mat, seg){ return at(cyl(r, z1 - z0, mat, seg), 0, 0, (z0 + z1) / 2); }
+function box(w, h, d, mat){ return new T.Mesh(new T.BoxGeometry(w, h, d), mat); }
+function bar(x1, y1, x2, y2, w, t, mat){
+  var dx = x2 - x1, dy = y2 - y1, L = Math.sqrt(dx * dx + dy * dy);
+  var m = box(L, w, t, mat); m.position.set((x1 + x2) / 2, (y1 + y2) / 2, 0); m.rotation.z = Math.atan2(dy, dx); return m;
+}
+function gearGeo(z, m, t, o){
+  o = o || {};
+  var R = m * z / 2, Ro = R + .9 * m, Rr = R - 1.1 * m, p = Math.PI * 2 / z, sh = new T.Shape(), i, a;
+  for (i = 0; i < z; i++){
+    a = i * p;
+    var pts = [[Rr, a - .29 * p], [Ro, a - .13 * p], [Ro, a + .13 * p], [Rr, a + .29 * p]];
+    for (var k = 0; k < 4; k++){
+      var x = pts[k][0] * Math.cos(pts[k][1]), y = pts[k][0] * Math.sin(pts[k][1]);
+      if (i === 0 && k === 0) sh.moveTo(x, y); else sh.lineTo(x, y);
+    }
+  }
+  sh.closePath();
+  if (o.spokes){
+    var ri = Rr - (o.rim || m * 2.2), rh = o.hub || Math.max(1.6, R * .2), w = o.sw || Math.max(.9, R * .1), n = o.spokes;
+    var di = Math.asin(w / 2 / ri), dh = Math.asin(Math.min(.95, w / 2 / rh));
+    for (i = 0; i < n; i++){
+      var a0 = i * 2 * Math.PI / n + (o.rot || 0), a1 = a0 + 2 * Math.PI / n, h = new T.Path();
+      h.moveTo(rh * Math.cos(a0 + dh), rh * Math.sin(a0 + dh));
+      h.absarc(0, 0, ri, a0 + di, a1 - di, false);
+      h.absarc(0, 0, rh, a1 - dh, a0 + dh, true);
+      sh.holes.push(h);
+    }
+  }
+  var g = new T.ExtrudeGeometry(sh, { depth:t, bevelEnabled:false, curveSegments:10 });
+  g.translate(0, 0, -t / 2); return g;
+}
+function gear(z, m, t, mat, o){ var g = new T.Mesh(gearGeo(z, m, t, o), mat); g.userData.z = z; return g; }
+function flat(points, t, mat){
+  var sh = new T.Shape(); points.forEach(function(p, i){ if (i) sh.lineTo(p[0], p[1]); else sh.moveTo(p[0], p[1]); });
+  var g = new T.ExtrudeGeometry(sh, { depth:t, bevelEnabled:false }); g.translate(0, 0, -t / 2);
+  return new T.Mesh(g, mat);
+}
+/* phase so that gear b (at pb) meshes with gear a (at pa, static phase fa) */
+function frac(v){ return v - Math.floor(v); }
+function meshPhase(pa, za, fa, pb, zb){
+  var al = Math.atan2(pb.y - pa.y, pb.x - pa.x), pA = 2 * Math.PI / za, pB = 2 * Math.PI / zb;
+  var f = frac((al - fa) / pA);
+  return al + Math.PI - pB * frac(.5 - f);
+}
+
+/* part registry */
+var world = new T.Group(); scene.add(world);
+var spinners = [];
+function addPart(id, name, st, conf, note, explode, insert, build){
+  var g = new T.Group(); g.userData.partId = id; build(g); world.add(g);
+  var p = { id:id, name:name, step:st, conf:conf, note:note, group:g, explode:new T.Vector3().fromArray(explode),
+            insert:new T.Vector3().fromArray(insert), t:1, hl:false };
+  g.traverse(function(o){ if (o.isMesh){ o.userData.base = o.material; o.userData.part = p; } });
+  parts.push(p); return p;
+}
+function spinner(parent, pos, z, rate){
+  var g = new T.Group(); g.position.set(pos.x, pos.y, z || 0); parent.add(g);
+  spinners.push({ g:g, rate:rate, phase:0 }); return g;
+}
+
+/* ---- plates ---- */
+function plate(mat){
+  var g = new T.Group(), i;
+  g.add(at(box(6.5, 48, PT, mat), 0, 24, 0));
+  g.add(at(cyl(4, PT, mat), TOP.x, TOP.y, 0));
+  g.add(at(cyl(5.2, PT, mat), U.x, U.y, 0));
+  g.add(at(cyl(5.6, PT, mat), 0, 0, 0));
+  var yt = function(x){ return 8.5 - 9 * (x / 30) * (x / 30); }, yb = function(x){ return -8.5 + 2 * (x / 30) * (x / 30); };
+  var sh = new T.Shape(), x;
+  for (i = 0; i <= 40; i++){ x = -30 + 60 * i / 40; if (i) sh.lineTo(x, yt(x)); else sh.moveTo(x, yt(x)); }
+  for (i = 0; i <= 40; i++){ x = 30 - 60 * i / 40; sh.lineTo(x, yb(x)); }
+  sh.closePath();
+  [1, -1].forEach(function(sg){
+    var h = new T.Path(), up = [], dn = [];
+    for (i = 0; i <= 24; i++){
+      var s = i / 24; x = 7 + 15.5 * s;
+      var mid = (yt(x) + yb(x)) / 2, half = ((yt(x) - yb(x)) / 2 - 2.2) * Math.pow(Math.sin(Math.PI * s), .55);
+      up.push([sg * x, mid + half]); dn.push([sg * x, mid - half]);
+    }
+    h.moveTo(up[0][0], up[0][1]);
+    for (i = 1; i < up.length; i++) h.lineTo(up[i][0], up[i][1]);
+    for (i = dn.length - 2; i > 0; i--) h.lineTo(dn[i][0], dn[i][1]);
+    h.closePath(); sh.holes.push(h);
+  });
+  var arch = new T.ExtrudeGeometry(sh, { depth:PT, bevelEnabled:false }); arch.translate(0, 0, -PT / 2);
+  g.add(new T.Mesh(arch, mat));
+  [1, -1].forEach(function(sg){
+    g.add(at(cyl(4, PT, mat), sg * EYE.x, EYE.y, 0));
+    g.add(bar(sg * 7, -7, sg * LR.x, LR.y, 3.6, PT, mat));
+    g.add(bar(sg * LR.x, LR.y, sg * 20, -33, 3.6, PT, mat));
+    g.add(at(cyl(2.7, PT, mat), sg * LR.x, LR.y, 0));
+  });
+  g.add(at(box(50, 3.4, PT, mat), 0, -33.3, 0));
+  g.add(at(box(3.4, 9, PT, mat), 0, -28.5, 0));
+  g.add(at(cyl(3.3, PT, mat), S.x, S.y, 0));
+  return g;
+}
+function screwHead(mat){
+  var g = new T.Group(); g.add(cyl(2.3, .9, mat, 20)); g.add(at(box(4.2, .5, .3, M.dark), 0, 0, .45)); return g;
+}
+
+addPart('back', 'Back plate', 1, 'seen', 'Arm at the top, arched bridge, two legs and a bottom bar. Mirror image of the front plate.',
+  [0, 0, -52], [0, 0, 0], function(g){
+    g.add(plate(M.brass));
+    [[EYE.x, EYE.y], [-EYE.x, EYE.y], [TOP.x, TOP.y]].forEach(function(p){ var s = screwHead(M.brass); s.rotation.y = Math.PI; g.add(at(s, p[0], p[1], -PT / 2 - .45)); });
+  });
+addPart('pillars', 'Two pillars and the top post', 1, 'seen', 'Plain brass columns that set the gap between the plates.',
+  [0, 0, -52], [0, 0, 40], function(g){
+    [[EYE.x, EYE.y], [-EYE.x, EYE.y], [TOP.x, TOP.y]].forEach(function(p){
+      g.add(at(cyl(2.2, GAP - PT, M.brass), p[0], p[1], GAP / 2));
+      g.add(at(cyl(3, 1, M.brass), p[0], p[1], PT / 2 + .5));
+      g.add(at(cyl(3, 1, M.brass), p[0], p[1], GAP - PT / 2 - .5));
+    });
+  });
+
+/* ---- motor (assumed) ---- */
+addPart('motor', 'Coil and stator', 2, 'assumed', 'Simplified. The real block may be a different shape and sit elsewhere in the lower frame.',
+  [0, -6, -40], [0, -30, 0], function(g){
+    g.add(at(box(22, 9, 1, M.dark), 8.5, -28.3, 2.2));
+    var c = new T.Mesh(new T.CylinderGeometry(2.5, 2.5, 17, 24), M.copper); c.rotation.z = Math.PI / 2; g.add(at(c, -2, -31, 4.6));
+    g.add(at(box(2, 5.4, 5.4, M.cream), -11, -31, 4.6)); g.add(at(box(2, 5.4, 5.4, M.cream), 7, -31, 4.6));
+  });
+var rotorSpin;
+addPart('rotor', 'Rotor', 2, 'assumed', 'Tiny magnet wheel with a pinion. It turns half a turn each second.',
+  [0, 0, -30], [0, 0, 50], function(g){
+    rotorSpin = spinner(g, ROT, 0, 1800);
+    rotorSpin.add(rod(.4, 1.6, 8, M.steel, 10));
+    rotorSpin.add(at(cyl(2.6, 1.6, M.dark, 20), 0, 0, 4.6));
+    var pin = at(gear(8, .393, 1.5, M.brass), 0, 0, 6.5); pin.name = 'rp'; rotorSpin.add(pin);
+  });
+
+/* ---- center arbor ---- */
+var cenSpin, Kw;
+addPart('center', 'Center arbor with setting knob', 3, 'seen', 'Long steel shaft. Chrome knob and brass sleeve stay behind the back plate. The minute hand goes on the front end.',
+  [0, 0, 0], [0, 0, 70], function(g){
+    cenSpin = spinner(g, C, 0, -1);
+    cenSpin.add(rod(.8, -15, 31, M.steel, 14));
+    cenSpin.add(at(cyl(5, 4, M.chrome, 36), 0, 0, -15));
+    cenSpin.add(rod(2.2, -13, -2.4, M.brass));
+    cenSpin.add(rod(3, -2.4, -.9, M.brass));
+  });
+addPart('spring', 'Tension spring', 3, 'seen', 'Dark coil just inside the back plate. It presses the center wheel so the knob can slip the hands round.',
+  [0, 0, -40], [0, 0, 60], function(g){
+    for (var i = 0; i < 3; i++){ var t = new T.Mesh(new T.TorusGeometry(2.3, .34, 8, 24), M.dark); g.add(at(t, 0, 0, 1 + i * .7)); }
+  });
+addPart('K', 'Center wheel, about 90 coarse teeth', 3, 'seen', 'About 42 mm across with five spokes. Sits close to the back plate.',
+  [0, 0, -30], [0, 0, 60], function(g){
+    var s = spinner(g, C, 3.5, -1);
+    Kw = gear(90, .4667, 1, M.brass, { spokes:5, hub:3.4, sw:2.2, rim:1.5, rot:.2 }); s.add(Kw);
+    s.add(cyl(3.4, 1.8, M.brass));
+  });
+
+/* ---- right leg transfer wheel ---- */
+var Tw, Tp, tSpin;
+addPart('T', 'Transfer wheel, right leg', 4, 'partly', 'About 19 mm across with a small pinion on its front face. I can see its rim, not its teeth.',
+  [0, 0, -22], [0, 0, 55], function(g){
+    tSpin = spinner(g, LR, 0, -300);
+    tSpin.add(rod(.5, -.4, GAP + .4, M.steel, 10));
+    Tw = at(gear(48, .393, .9, M.brass, { spokes:4, hub:1.8, sw:1.2, rim:1 }), 0, 0, 6.5); tSpin.add(Tw);
+    Tp = at(gear(8, .45, 3, M.brass), 0, 0, 9.5); tSpin.add(Tp);
+  });
+
+/* ---- seconds arbor + idler X ---- */
+var secSpin, secW, S1, xSpin, Xw;
+addPart('sec', 'Seconds arbor with two wheels', 5, 'partly', 'The pivot holes at bottom center are visible. The two wheels are my guess: about 18 mm at the back, about 17 mm further forward.',
+  [0, 0, -6], [0, 0, 60], function(g){
+    secSpin = spinner(g, S, 0, -60);
+    secSpin.add(rod(.5, -.4, 26.6, M.steel, 10));
+    secW = at(gear(40, .45, .9, M.brass, { spokes:4, hub:1.8, sw:1.2, rim:1 }), 0, 0, 9.5); secSpin.add(secW);
+    S1 = at(gear(30, .555, .9, M.brass, { spokes:3, hub:1.8, sw:1.3, rim:1 }), 0, 0, 14.5); secSpin.add(S1);
+  });
+addPart('X', 'Small idler', 5, 'assumed', 'Links the transfer wheel to the seconds arbor. A front-plate pivot near here is visible, the wheel is not.',
+  [0, 0, -12], [0, 0, 55], function(g){
+    xSpin = spinner(g, XI, 0, 150);
+    xSpin.add(rod(.4, 8.4, GAP + .4, M.steel, 10));
+    Xw = at(gear(16, .45, .9, M.brass), 0, 0, 9.5); xSpin.add(Xw);
+  });
+
+/* ---- left idler ---- */
+var iSpin, Iw;
+addPart('I', 'Idler wheel, left leg', 6, 'partly', 'About 19 mm across, roughly 34 teeth. Its rim shows beside the left pillar in the front photo.',
+  [0, 0, 4], [0, 0, 55], function(g){
+    iSpin = spinner(g, LL, 0, 37.5 * 48 / 34);
+    iSpin.add(rod(.5, -.4, GAP + .4, M.steel, 10));
+    Iw = at(gear(34, .555, .9, M.brass, { spokes:3, hub:1.8, sw:1.3, rim:1 }), 0, 0, 14.5); iSpin.add(Iw);
+  });
+
+/* ---- center pipe ---- */
+var pipeSpin, Mw, cw;
+addPart('pipe', 'Center pipe with wheel and pinion', 7, 'partly', 'Medium wheel (about 48 teeth) behind a 20-tooth pinion on one free-turning pipe. Edges of the wheel show through the bridge cut-outs.',
+  [0, 0, 10], [0, 0, 55], function(g){
+    pipeSpin = spinner(g, C, 0, -37.5);
+    pipeSpin.add(rod(1.7, 13.6, 18.2, M.brass, 18));
+    Mw = at(gear(48, .555, .9, M.brass, { spokes:4, hub:2.6, sw:1.6, rim:1.1, rot:.4 }), 0, 0, 14.5); pipeSpin.add(Mw);
+    cw = at(gear(20, .3967, 1.5, M.brass), 0, 0, 17); pipeSpin.add(cw);
+  });
+
+/* ---- upper arbor ---- */
+var uSpin, Fw, Lp;
+addPart('upper', 'Upper arbor: collar, long pinion, spacer, big wheel', 8, 'seen', 'Big wheel is about 40 mm across with five spokes and sits just behind the front plate. The cream spacer is plastic.',
+  [0, 0, 18], [0, 0, 60], function(g){
+    uSpin = spinner(g, U, 0, 7.5);
+    uSpin.add(rod(.6, -.4, GAP + .4, M.steel, 10));
+    uSpin.add(at(cyl(2.1, 1.1, M.brass, 18), 0, 0, 1.6));
+    Lp = at(gear(12, .4667, 6.5, M.brass), 0, 0, 5.75); uSpin.add(Lp);
+    uSpin.add(rod(2.3, 9, 15.6, M.cream, 20));
+    Fw = at(gear(100, .3967, 1, M.brass, { spokes:5, hub:3.2, sw:2, rim:1.5, rot:-.31 }), 0, 0, 17); uSpin.add(Fw);
+    uSpin.add(at(cyl(3.2, 1.8, M.brass), 0, 0, 17));
+  });
+
+/* ---- motion work (assumed) ---- */
+var canW, minSpin, minW, minP, hourSpin, hourW;
+addPart('cannon', 'Pinion fixed on the center arbor', 9, 'assumed', 'Turns with the minute hand. On your clock it may be part of the arbor already.',
+  [0, 0, 24], [0, 0, 50], function(g){
+    var s = spinner(g, C, 19.6, -1); canW = gear(10, .56, 1.2, M.brass); s.add(canW);
+  });
+addPart('minw', 'Small wheel and pinion on a stud', 9, 'assumed', 'Rides on a stud on the inside of the front plate. Position is my assumption.',
+  [0, 0, 30], [0, 0, 50], function(g){
+    g.add(at(cyl(.6, 4.4, M.steel, 10), STUD.x, STUD.y, 20.8));
+    minSpin = spinner(g, STUD, 0, 1 / 3);
+    minW = at(gear(30, .56, .9, M.brass, { spokes:3, hub:1.6, sw:1.1, rim:.9 }), 0, 0, 19.6); minSpin.add(minW);
+    minP = at(gear(8, .56, 1.3, M.brass), 0, 0, 20.9); minSpin.add(minP);
+  });
+addPart('hourw', 'Hour wheel on its tube', 9, 'assumed', 'The tube passes through the front plate and carries the hour hand.',
+  [0, 0, 36], [0, 0, 50], function(g){
+    hourSpin = spinner(g, C, 0, -1 / 12);
+    hourW = at(gear(32, .56, .9, M.brass, { spokes:4, hub:2.2, sw:1.2, rim:.9 }), 0, 0, 21); hourSpin.add(hourW);
+    hourSpin.add(rod(1.5, 20.4, 29, M.brass, 16));
+  });
+
+/* ---- front plate ---- */
+addPart('front', 'Front plate and three screws', 10, 'seen', 'Same outline as the back plate. Slotted screws at both pillars and at the top.',
+  [0, 0, 50], [0, 0, 60], function(g){
+    var p = plate(M.brass); p.position.z = GAP; g.add(p);
+    [[EYE.x, EYE.y], [-EYE.x, EYE.y], [TOP.x, TOP.y]].forEach(function(q, i){
+      var s = screwHead(M.brass); s.rotation.z = .5 + i; g.add(at(s, q[0], q[1], GAP + PT / 2 + .45));
+    });
+  });
+
+/* ---- shelf, posts, battery box ---- */
+addPart('shelf', 'Shelf and four posts', 11, 'partly', 'Polished plate under the movement. Its size and the post positions are approximate.',
+  [0, -20, 0], [0, -40, 0], function(g){
+    g.add(at(box(78, 1.5, 44, M.mirror), 0, -35.75, -2));
+    [[-33, -20], [33, -20], [-33, 16], [33, 16]].forEach(function(p){
+      var c = new T.Mesh(new T.CylinderGeometry(3, 3, HC - 36.5, 24), M.brass); g.add(at(c, p[0], -36.5 - (HC - 36.5) / 2, p[1]));
+    });
+  });
+addPart('batt', 'Battery box', 11, 'seen', 'Brushed gold box behind and below the back plate. Holds one AA cell.',
+  [0, -20, -34], [0, -30, -30], function(g){ g.add(at(box(62, 16, 19, M.brushed), 0, -44.5, -14.5)); });
+
+/* ---- dial ---- */
+var DA = 48.5, DB = 58, DW = 16;                     // dial: outer half-width, outer half-height, band width
+function dialTexture(){
+  var cv = document.createElement('canvas'); cv.width = cv.height = 1024;
+  var g = cv.getContext('2d'), s = 512 / DB, i;
+  g.translate(512, 512);
+  g.fillStyle = '#e9d7a4'; g.fillRect(-512, -512, 1024, 1024);
+  for (i = 0; i < 2600; i++){                        // fine sunray grain
+    var a = Math.random() * 6.283, r0 = (30 + Math.random() * 20) * s, r1 = r0 + (4 + Math.random() * 10) * s;
+    g.strokeStyle = Math.random() < .5 ? 'rgba(255,250,235,.10)' : 'rgba(120,95,40,.07)';
+    g.lineWidth = 1; g.beginPath(); g.moveTo(r0 * Math.sin(a), -r0 * Math.cos(a)); g.lineTo(r1 * Math.sin(a), -r1 * Math.cos(a)); g.stroke();
+  }
+  g.fillStyle = '#141210'; g.strokeStyle = '#141210'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '700 ' + (10.5 * s) + 'px "Times New Roman", Times, serif';
+  var num = { 0:'XII', 3:'III', 6:'VI', 9:'IX' }, am = DA - DW / 2, bm = DB - DW / 2;
+  for (i = 0; i < 12; i++){
+    var an = i / 12 * Math.PI * 2, sx = Math.sin(an), cy = -Math.cos(an);
+    if (num[i]){
+      g.save(); g.translate(am * sx * s, bm * cy * s); g.rotate(an); g.fillText(num[i], 0, 0); g.restore();
+    } else {
+      g.lineWidth = .45 * s; g.beginPath();
+      g.moveTo((DA - DW + 2.6) * sx * s, (DB - DW + 2.6) * cy * s); g.lineTo((DA - 2.6) * sx * s, (DB - 2.6) * cy * s); g.stroke();
+    }
+  }
+  var t = new T.CanvasTexture(cv); t.encoding = T.sRGBEncoding; t.anisotropy = 16; return t;
+}
+function ovalRingGeo(){
+  var sh = new T.Shape(); sh.absellipse(0, 0, DA, DB, 0, Math.PI * 2, false, 0);
+  var h = new T.Path(); h.absellipse(0, 0, DA - DW, DB - DW, 0, Math.PI * 2, true, 0); sh.holes.push(h);
+  var geo = new T.ShapeGeometry(sh, 96), pos = geo.attributes.position, uv = geo.attributes.uv;
+  for (var i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / (2 * DB) + .5, pos.getY(i) / (2 * DB) + .5);
+  return geo;
+}
+function ovalRim(a, b){
+  var pts = []; for (var i = 0; i < 120; i++){ var t = i / 120 * Math.PI * 2; pts.push(new T.Vector3(a * Math.cos(t), b * Math.sin(t), 0)); }
+  return new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts, true), 240, .75, 10, true), M.brass);
+}
+function secTexture(){
+  var cv = document.createElement('canvas'); cv.width = cv.height = 512;
+  var g = cv.getContext('2d'), s = 256 / 16, i;
+  g.translate(256, 256);
+  g.fillStyle = '#e3c676'; g.fillRect(-256, -256, 512, 512);
+  g.fillStyle = '#17120a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '700 ' + (3.9 * s) + 'px "Times New Roman", Times, serif';
+  for (i = 0; i < 12; i++){
+    g.save(); g.rotate(i / 12 * Math.PI * 2);
+    if (i % 2 === 0) g.fillText(i === 0 ? '60' : String(i * 5), 0, -13 * s);
+    else { g.beginPath(); g.arc(0, -13 * s, .45 * s, 0, 7); g.fill(); }
+    g.restore();
+  }
+  var t = new T.CanvasTexture(cv); t.encoding = T.sRGBEncoding; t.anisotropy = 8; return t;
+}
+addPart('secring', 'Seconds ring and two screws', 12, 'seen', 'Gold ring numbered 60, 10, 20, 30, 40, 50.',
+  [0, 0, 62], [0, 0, 50], function(g){
+    var f = new T.Mesh(new T.RingGeometry(10, 16, 64, 1), std({ map:secTexture(), metalness:.85, roughness:.4 }));
+    g.add(at(f, S.x, S.y, 25.9));
+    var b = new T.Mesh(new T.RingGeometry(10, 16, 64, 1), M.brass); b.rotation.y = Math.PI; g.add(at(b, S.x, S.y, 25.2));
+    [-1, 1].forEach(function(sg){ g.add(at(cyl(.9, .5, M.brass, 12), S.x + sg * 13, S.y - 2.4, 26.1)); });
+  });
+addPart('dposts', 'Dial posts and top bar', 12, 'partly', 'The four screw positions are visible. What they screw into behind the ring is approximate.',
+  [0, 0, 56], [0, 0, 50], function(g){
+    g.add(at(box(32, 5, 1.2, M.brass), 0, 47.3, GAP + PT / 2 + .6));
+    [[13.5, 47.1, GAP + 1.8], [-13.5, 47.1, GAP + 1.8], [34, -35.2, 20], [-34, -35.2, 20]].forEach(function(p){
+      g.add(at(cyl(1.7, 26.6 - p[2], M.brass, 16), p[0], p[1], (26.6 + p[2]) / 2));
+    });
+  });
+addPart('dial', 'Dial ring and four screws', 12, 'seen', 'Pale gold oval ring, taller than it is wide, with XII, III, VI and IX. About 97 by 116 mm.',
+  [0, 0, 74], [0, 0, 60], function(g){
+    var f = new T.Mesh(ovalRingGeo(), std({ map:dialTexture(), metalness:.9, roughness:.3, envMapIntensity:1.1 }));
+    g.add(at(f, 0, 0, 27.8));
+    var b = new T.Mesh(ovalRingGeo(), M.mirror); b.rotation.y = Math.PI; g.add(at(b, 0, 0, 26.6));
+    g.add(at(ovalRim(DA, DB), 0, 0, 27.2)); g.add(at(ovalRim(DA - DW, DB - DW), 0, 0, 27.2));
+    [[13.5, 47.1], [-13.5, 47.1], [34, -35.2], [-34, -35.2]].forEach(function(p, i){
+      var s = screwHead(M.brass); s.scale.set(.8, .8, 1); s.rotation.z = i * .9; g.add(at(s, p[0], p[1], 28.2));
+    });
+  });
+
+/* ---- hands ---- */
+var hourHand, minHand, secHand;
+addPart('hhand', 'Hour hand', 13, 'seen', 'Short black hand. Presses onto the tube.',
+  [0, 0, 86], [0, 0, 50], function(g){
+    hourHand = new T.Group(); g.add(hourHand);
+    hourHand.add(at(flat([[-1.5, -5], [1.5, -5], [2, 3], [2.8, 17], [0, 25], [-2.8, 17], [-2, 3]], .5, M.black), 0, 0, 28.7));
+    hourHand.add(at(cyl(3.1, .5, M.black, 24), 0, 0, 28.7));
+  });
+addPart('mhand', 'Minute hand and cap nut', 13, 'seen', 'Long black hand, held by a gold knurled cap.',
+  [0, 0, 96], [0, 0, 50], function(g){
+    minHand = new T.Group(); g.add(minHand);
+    minHand.add(at(flat([[-1.2, -6], [1.2, -6], [1.6, 4], [2.1, 27], [0, 37], [-2.1, 27], [-1.6, 4]], .5, M.black), 0, 0, 29.8));
+    minHand.add(at(cyl(2.8, .5, M.black, 24), 0, 0, 29.8));
+    var cap = new T.Mesh(new T.CylinderGeometry(1.2, 4.1, 2.8, 30), gold({ roughness:.2, flatShading:true }));
+    cap.rotation.x = Math.PI / 2; minHand.add(at(cap, 0, 0, 31.6));
+  });
+addPart('shand', 'Seconds hand', 13, 'assumed', 'Not visible in any photo. Yours may be missing or may never have had one fitted.',
+  [0, 0, 68], [0, 0, 50], function(g){
+    secHand = new T.Group(); secHand.position.set(S.x, S.y, 0); g.add(secHand);
+    secHand.add(at(flat([[-.5, -3], [.5, -3], [.4, 10], [0, 11.6], [-.4, 10]], .3, M.brass), 0, 0, 26.35));
+    secHand.add(at(cyl(1.2, .4, M.brass, 16), 0, 0, 26.35));
+  });
+
+/* ---- base and cover ---- */
+var ZC = 6;
+var mirror = null, basePart;
+basePart = addPart('base', 'Base', 14, 'seen', 'Polished gold plinth with a mirrored top, about 210 by 120 mm.',
+  [0, -34, 0], [0, -50, 0], function(g){
+    g.add(at(box(214, 5, 124, M.brass), 0, -HC - 5.5, ZC));
+    g.add(at(box(208, 3, 118, M.brass), 0, -HC - 1.5, ZC));
+    // the top is a true mirror: the scene is drawn a second time from below and projected onto this sheet
+    var mm = new T.ShaderMaterial({
+      uniforms:{ tMap:{ value:null }, tMat:{ value:new T.Matrix4() }, tint:{ value:new T.Color(1, .80, .50) }, on:{ value:0 }, blur:{ value:.0065 }, aspect:{ value:1 } },
+      vertexShader:'uniform mat4 tMat; varying vec4 vP; void main(){ vP = tMat * modelMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader:'uniform sampler2D tMap; uniform vec3 tint; uniform float on; uniform float blur; uniform float aspect; varying vec4 vP;\n#include <common>\nvoid main(){ vec2 uv = vP.xy / vP.w; vec3 acc = texture2D(tMap, uv).rgb * 2.0; float wsum = 2.0; for (int i = 0; i < 28; i++){ float a = float(i) * 2.39996; float r = sqrt((float(i) + .5) / 28.0) * blur; acc += texture2D(tMap, uv + vec2(cos(a), sin(a) * aspect) * r).rgb; wsum += 1.0; } vec3 c = mix(vec3(.55), acc / wsum, on); gl_FragColor = vec4(c * tint, 1.0);\n#include <tonemapping_fragment>\n#include <encodings_fragment>\n}'
+    });
+    mirror = new T.Mesh(new T.PlaneGeometry(204, 114), mm); mirror.rotation.x = -Math.PI / 2; mirror.userData.noPick = true;
+    g.add(at(mirror, 0, -HC + .02, ZC));
+  });
+var coverPart = addPart('cover', 'Acrylic pyramid cover', 14, 'seen', 'Clear acrylic. A gold pyramid cap sits over the tip and one wraps around the outside of each base corner. Lifts straight off.',
+  [0, 150, 0], [0, 130, 0], function(g){
+    var k = 1 / Math.SQRT1_2;
+    function pyr(hx, hz, h){
+      var q = new T.ConeGeometry(1, h, 4, 1, true); q.rotateY(Math.PI / 4); q.scale(hx * k, 1, hz * k);
+      q = q.toNonIndexed(); q.computeVertexNormals(); return q;        // flat panes, so each face reflects on its own
+    }
+    var geo = pyr(102, 57, 200);
+    [M.glassTint, M.glassShine].forEach(function(mat, i){
+      var m = new T.Mesh(geo, mat); m.userData.noPick = true; m.renderOrder = 10 + i; g.add(at(m, 0, -HC + 100, ZC));
+    });
+    // polished edges of the acrylic
+    var apex = new T.Vector3(0, -HC + 200, ZC), up = new T.Vector3(0, 1, 0);
+    [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(function(c){
+      var a = new T.Vector3(c[0] * 102, -HC, ZC + c[1] * 57), d = apex.clone().sub(a), len = d.length();
+      var rail = new T.Mesh(new T.CylinderGeometry(.6, .6, len, 6), M.edge); rail.userData.noPick = true; rail.renderOrder = 12;
+      rail.position.copy(a).addScaledVector(d, .5); rail.quaternion.setFromUnitVectors(up, d.normalize()); g.add(rail);
+    });
+    // gold caps, outside the acrylic: a small pyramid over the tip and one wrapped around each base corner
+    var capM = gold({ side:T.DoubleSide, roughness:.06 });
+    var hx = 104, hz = 59, H = 204, tip = new T.Vector3(0, -HC + 202.5, ZC), fr = .15, capH = 28;
+    g.add(at(new T.Mesh(pyr(hx * capH / H, hz * capH / H, capH), capM), 0, tip.y - capH / 2, ZC));
+    [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(function(c){
+      var A = new T.Vector3(c[0] * hx, -HC, ZC + c[1] * hz);
+      var P1 = A.clone(); P1.x -= c[0] * 2 * hx * fr;
+      var P2 = A.clone(); P2.z -= c[1] * 2 * hz * fr;
+      var P3 = A.clone().lerp(tip, fr);
+      var flip = c[0] * c[1] > 0;                                       // keep the faces wound outward
+      var bg = new T.BufferGeometry().setFromPoints(flip ? [A, P3, P1, A, P2, P3] : [A, P1, P3, A, P3, P2]); bg.computeVertexNormals();
+      g.add(new T.Mesh(bg, capM));
+    });
+  });
+
+/* static tooth phases so meshing gears interlock */
+(function(){
+  function setP(mesh, ph){ mesh.rotation.z = ph; return ph; }
+  setP(Lp, meshPhase(C, 90, Kw.rotation.z, U, 12));
+  setP(cw, meshPhase(U, 100, Fw.rotation.z, C, 20));
+  var pi = setP(Iw, meshPhase(C, 48, Mw.rotation.z, LL, 34));
+  setP(S1, meshPhase(LL, 34, pi, S, 30));
+  var px = setP(Xw, meshPhase(S, 40, secW.rotation.z, XI, 16));
+  setP(Tp, meshPhase(XI, 16, px, LR, 8));
+  var rp = rotorSpin.children[2]; setP(rp, meshPhase(LR, 48, Tw.rotation.z, ROT, 8));
+  setP(minW, meshPhase(C, 10, canW.rotation.z, STUD, 30));
+  setP(hourW, meshPhase(STUD, 8, minP.rotation.z, C, 32));
+})();
+
+/* ---------- view state ---------- */
+var cam = { th:.62, ph:1.27, r:590, tx:0, ty:30, tz:6 }, goal = { r:590, tx:0, ty:30, tz:6, th:null, ph:null };
+var explode = 0, running = 60, mark = true, showCover = true, simH = 10 + 9 / 60, dirty = true, pulse = 0;
+var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var hlCache = new Map();
+
+function matFor(mesh){
+  var p = mesh.userData.part, m = (mark && p.conf === 'assumed') ? M.ghost : mesh.userData.base;
+  if (!p.hl) return m;
+  var c = hlCache.get(m);
+  if (!c){ c = m.clone(); c.emissive = new T.Color(0xff7a00); c.userData.k = (m === M.black) ? .22 : 1; c.emissiveIntensity = .3 * c.userData.k; hlCache.set(m, c); }
+  return c;
+}
+function refreshMaterials(){
+  parts.forEach(function(p){ p.group.traverse(function(o){ if (o.isMesh && o.userData.base && !o.userData.noPick) o.material = matFor(o); }); });
+  dirty = true;
+}
+function visibleNow(p){
+  if (p === coverPart && !showCover) return false;
+  return step === 0 || p.step <= step;
+}
+function aspectFit(){ var a = camera.aspect || 1; return Math.max(1, 1.12 / a); }
+onStep = function(){
+  parts.forEach(function(p){
+    var was = p.group.visible; p.group.visible = visibleNow(p);
+    p.hl = step > 0 && p.step === step;
+    if (p.hl && !reduce) p.t = 0; else p.t = 1;
+    if (!was && p.group.visible && step === 0) p.t = 1;
+  });
+  var c = STEPS[step].cam; goal.tx = c.t[0]; goal.ty = c.t[1]; goal.tz = c.t[2]; goal.r = c.r * aspectFit();
+  $('cover').parentNode.style.display = (step === 0 || step === STEPS.length - 1) ? '' : 'none';
+  refreshMaterials(); showReadout(null);
+};
+function showReadout(p){
+  var r = $('readout'); r.textContent = '';
+  var a = document.createElement('strong'), b = document.createElement('span');
+  if (p){ a.textContent = p.name; b.textContent = CONF[p.conf] + '. ' + p.note + (p.step !== step && step !== 0 ? ' Fitted in step ' + p.step + '.' : (step === 0 ? ' Fitted in step ' + p.step + '.' : '')); }
+  else { a.textContent = 'Drag to turn, scroll or pinch to zoom'; b.textContent = 'Tap any part to name it.'; }
+  r.appendChild(a); r.appendChild(b);
+}
+var picked = null;
+onPick = function(p){
+  if (picked && picked !== p){ picked.hl = step > 0 && picked.step === step; }
+  picked = p; p.hl = true; refreshMaterials(); showReadout(p);
+};
+
+/* controls */
+$('explode').addEventListener('input', function(e){ explode = e.target.value / 100; dirty = true; });
+$('speed').addEventListener('change', function(e){ running = +e.target.value; dirty = true; });
+$('mark').addEventListener('change', function(e){ mark = e.target.checked; refreshMaterials(); });
+$('cover').addEventListener('change', function(e){ showCover = e.target.checked; coverPart.group.visible = visibleNow(coverPart); dirty = true; });
+Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function(b){
+  b.addEventListener('click', function(){
+    var v = b.getAttribute('data-view');
+    goal.th = v === 'front' ? 0 : v === 'back' ? Math.PI : v === 'side' ? Math.PI / 2 : .62;
+    goal.ph = v === 'angle' ? 1.27 : 1.5;
+    // take the short way round
+    while (goal.th - cam.th > Math.PI) goal.th -= 2 * Math.PI;
+    while (goal.th - cam.th < -Math.PI) goal.th += 2 * Math.PI;
+    dirty = true;
+  });
+});
+
+/* pointer orbit, pinch zoom, tap to pick */
+var ptrs = new Map(), moved = 0, pinch0 = 0;
+canvas.addEventListener('pointerdown', function(e){
+  canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x:e.clientX, y:e.clientY }); moved = 0;
+  if (ptrs.size === 2){ var a = Array.from(ptrs.values()); pinch0 = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); }
+});
+canvas.addEventListener('pointermove', function(e){
+  var p = ptrs.get(e.pointerId); if (!p) return;
+  var dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
+  if (ptrs.size === 1){
+    goal.th = goal.ph = null;
+    cam.th -= dx * .0075; cam.ph = Math.min(Math.PI - .12, Math.max(.12, cam.ph - dy * .0075));
+  } else if (ptrs.size === 2){
+    var a = Array.from(ptrs.values()), d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+    if (pinch0 > 0){ goal.r = Math.min(1400, Math.max(60, goal.r * pinch0 / d)); cam.r = goal.r; }
+    pinch0 = d;
+  }
+  dirty = true;
+});
+function up(e){
+  if (ptrs.has(e.pointerId) && ptrs.size === 1 && moved < 6) pick(e);
+  ptrs.delete(e.pointerId); pinch0 = 0;
+}
+canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', function(e){ ptrs.delete(e.pointerId); });
+canvas.addEventListener('wheel', function(e){
+  e.preventDefault(); goal.r = Math.min(1400, Math.max(60, goal.r * Math.exp(e.deltaY * .0012))); dirty = true;
+}, { passive:false });
+var ray = new T.Raycaster(), v2 = new T.Vector2();
+function pick(e){
+  var r = canvas.getBoundingClientRect();
+  v2.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1));
+  ray.setFromCamera(v2, camera);
+  var list = []; parts.forEach(function(p){ if (p.group.visible) p.group.traverse(function(o){ if (o.isMesh && !o.userData.noPick) list.push(o); }); });
+  var hit = ray.intersectObjects(list, false)[0];
+  if (hit && hit.object.userData.part) onPick(hit.object.userData.part);
+  else { if (picked){ picked.hl = step > 0 && picked.step === step; picked = null; refreshMaterials(); } showReadout(null); }
+}
+
+/* sizing */
+function resize(){
+  var w = view.clientWidth, h = view.clientHeight; if (!w || !h) return;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  goal.r = STEPS[step].cam.r * aspectFit(); dirty = true;
+}
+if (window.ResizeObserver) new ResizeObserver(resize).observe(view); else window.addEventListener('resize', resize);
+
+/* loop */
+var last = performance.now(), tmp = new T.Vector3();
+function ease(t){ return 1 - Math.pow(1 - t, 3); }
+function frame(now){
+  requestAnimationFrame(frame);
+  var dt = Math.min(.05, (now - last) / 1000); last = now;
+  var busy = dirty, k = 1 - Math.exp(-dt * 6);
+  ['r', 'tx', 'ty', 'tz'].forEach(function(n){ var d = goal[n] - cam[n]; if (Math.abs(d) > .02){ cam[n] += d * k; busy = true; } });
+  ['th', 'ph'].forEach(function(n){ if (goal[n] !== null){ var d = goal[n] - cam[n]; if (Math.abs(d) > .002){ cam[n] += d * k; busy = true; } else goal[n] = null; } });
+  if (running > 0){ simH += dt * running / 3600; busy = true; }
+  var anyHl = false;
+  parts.forEach(function(p){
+    if (p.t < 1){ p.t = Math.min(1, p.t + dt / .9); busy = true; }
+    if (p.hl) anyHl = true;
+  });
+  if (anyHl && !reduce) busy = true;
+  if (!busy) return;
+  dirty = false;
+  pulse += dt;
+  hlCache.forEach(function(c){ c.emissiveIntensity = c.userData.k * (reduce ? .28 : .2 + .16 * (1 + Math.sin(pulse * 4.2)) / 2); });
+  parts.forEach(function(p){
+    var e = 1 - ease(p.t);
+    tmp.copy(p.explode).multiplyScalar(explode).addScaledVector(p.insert, e);
+    p.group.position.copy(tmp);
+  });
+  var tw = simH * Math.PI * 2;
+  spinners.forEach(function(s){ s.g.rotation.z = s.rate * tw; });
+  hourHand.rotation.z = -tw / 12; minHand.rotation.z = -tw; secHand.rotation.z = -tw * 60;
+  var sp = Math.sin(cam.ph), rr = cam.r * (1 + .55 * explode);
+  camera.position.set(cam.tx + rr * sp * Math.sin(cam.th), cam.ty + rr * Math.cos(cam.ph), cam.tz + rr * sp * Math.cos(cam.th));
+  camera.lookAt(cam.tx, cam.ty, cam.tz);
+  renderMirror();
+  renderer.render(scene, camera);
+}
+var mirRT = null, mirCam = new T.PerspectiveCamera(), mN = new T.Vector3(0, 1, 0), mP = new T.Vector3(), mV = new T.Vector3(), mL = new T.Vector3(), mT = new T.Vector3();
+function renderMirror(){
+  if (!mirror) return;
+  var u = mirror.material.uniforms;
+  mirror.getWorldPosition(mP);
+  if (!basePart.group.visible || camera.position.y <= mP.y + 1){ u.on.value = 0; return; }
+  var sz = renderer.getDrawingBufferSize(new T.Vector2()); u.aspect.value = sz.x / sz.y;
+  if (!mirRT){ mirRT = new T.WebGLRenderTarget(sz.x, sz.y, { type:T.HalfFloatType, samples:4 }); u.tMap.value = mirRT.texture; }
+  else if (mirRT.width !== sz.x || mirRT.height !== sz.y) mirRT.setSize(sz.x, sz.y);
+  // camera mirrored through the top of the base
+  mV.copy(mP).sub(camera.position).reflect(mN).negate().add(mP);
+  mL.set(cam.tx, cam.ty, cam.tz); mT.copy(mP).sub(mL).reflect(mN).negate().add(mP);
+  mirCam.position.copy(mV); mirCam.up.set(0, -1, 0); mirCam.lookAt(mT);
+  mirCam.near = camera.near; mirCam.far = camera.far; mirCam.updateMatrixWorld(); mirCam.projectionMatrix.copy(camera.projectionMatrix);
+  u.tMat.value.set(.5, 0, 0, .5, 0, .5, 0, .5, 0, 0, .5, .5, 0, 0, 0, 1).multiply(mirCam.projectionMatrix).multiply(mirCam.matrixWorldInverse);
+  basePart.group.visible = false;
+  renderer.setRenderTarget(mirRT); renderer.clear(); renderer.render(scene, mirCam); renderer.setRenderTarget(null);
+  basePart.group.visible = true; u.on.value = 1;
+}
+
+if (window.matchMedia){ var mq = window.matchMedia('(prefers-color-scheme: dark)'); var onScheme = function(){ applyBackdrop(); dirty = true; }; if (mq.addEventListener) mq.addEventListener('change', onScheme); else if (mq.addListener) mq.addListener(onScheme); }
+if (window.MutationObserver) new MutationObserver(function(){ applyBackdrop(); dirty = true; }).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
+resize(); renderPanel(); onStep();
+cam.r = goal.r; cam.tx = goal.tx; cam.ty = goal.ty; cam.tz = goal.tz;
+requestAnimationFrame(frame);
+
+/* fallback index when WebGL is unavailable: names only, so the parts list still renders */
+function buildPartIndexOnly(){
+  [['back','Back plate',1,'seen'],['pillars','Two pillars and the top post',1,'seen'],['motor','Coil and stator',2,'assumed'],['rotor','Rotor',2,'assumed'],
+   ['center','Center arbor with setting knob',3,'seen'],['spring','Tension spring',3,'seen'],['K','Center wheel, about 90 coarse teeth',3,'seen'],
+   ['T','Transfer wheel, right leg',4,'partly'],['sec','Seconds arbor with two wheels',5,'partly'],['X','Small idler',5,'assumed'],
+   ['I','Idler wheel, left leg',6,'partly'],['pipe','Center pipe with wheel and pinion',7,'partly'],
+   ['upper','Upper arbor: collar, long pinion, spacer, big wheel',8,'seen'],['cannon','Pinion fixed on the center arbor',9,'assumed'],
+   ['minw','Small wheel and pinion on a stud',9,'assumed'],['hourw','Hour wheel on its tube',9,'assumed'],['front','Front plate and three screws',10,'seen'],
+   ['shelf','Shelf and four posts',11,'partly'],['batt','Battery box',11,'seen'],['secring','Seconds ring and two screws',12,'seen'],
+   ['dposts','Dial posts and top bar',12,'partly'],['dial','Dial ring and four screws',12,'seen'],['hhand','Hour hand',13,'seen'],
+   ['mhand','Minute hand and cap nut',13,'seen'],['shand','Seconds hand',13,'assumed'],['base','Base',14,'seen'],['cover','Acrylic pyramid cover',14,'seen']
+  ].forEach(function(a){ parts.push({ id:a[0], name:a[1], step:a[2], conf:a[3], note:'' }); });
+}
+})();
+</script>
+</body>
+</html>
